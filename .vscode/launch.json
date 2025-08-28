@@ -1,0 +1,112 @@
+{
+    "configurations": [
+        {
+            "name": "debug FlashPro 5/6 Polarfire",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/${input:path_to_image}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "linux": {
+                "miDebuggerPath": "${workspaceFolder}/riscv-none-elf-gcc/bin/riscv-none-elf-gdb",
+                "debugServerPath": "${workspaceFolder}/xpack-openocd-0.12.0-4/bin/openocd"
+            },
+            "windows": {
+                "miDebuggerPath":"${workspaceFolder}/xpack-riscv-none-elf-gcc-14.2.0-3/bin/riscv-none-elf-gdb.exe",
+                "debugServerPath": "${workspaceFolder}/xpack-openocd-0.12.0-4/bin/openocd.exe"
+            },
+            "miDebuggerArgs": "-se ${workspaceFolder}/${input:path_to_image}",
+            "debugServerArgs": "--command \"set DEVICE MPFS\" --command \"set COREID -1\" --file board/${input:debugger_config}.cfg",
+            "filterStderr": true,
+
+            "serverStarted": "Info : Listening on port ${input:gdb_port} for gdb connections",
+            "serverLaunchTimeout": 10000,
+            "launchCompleteCommand": "None",
+
+            "setupCommands": [
+                {"text": "handle SIGTRAP nostop"},
+                {"text": "set mem inaccessible-by-default off"},
+                {"text": "set architecture riscv:rv64"},
+                {"text": "target remote localhost:3333"},
+                {"text": "monitor reset halt"},
+                {"text": "load"},
+                {"text": "thread apply all set $pc=_start"},
+            ],
+            "logging": {
+                "moduleLoad": false,
+                "programOutput": false,
+                "engineLogging": true,
+                "trace": false
+            }
+        },
+        {
+            "name": "debug-renode",
+            "type": "cppdbg",
+            "request": "launch",
+            "MIMode": "gdb",
+            "linux": {
+                "miDebuggerPath":"${workspaceFolder}/riscv-none-elf-gcc/bin/riscv-none-elf-gdb",
+                "debugServerPath":"${workspaceFolder}/modules/debug/renode/renode"
+            },
+            "windows": {
+                "miDebuggerPath":"${workspaceFolder}/xpack-riscv-none-elf-gcc-14.2.0-3/bin/riscv-none-elf-gdb.exe",
+                "debugServerPath":"${workspaceFolder}/renode/bin/Renode.exe"
+            },
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/${input:path_to_image}",
+            "debugServerArgs":" -e \"$GDB_SERVER_PORT=${input:gdb_port}; path add @../boards/renode; i @scripts/${input:target_board}.resc\"",
+            "filterStdout": true,
+            "serverStarted": "Renode has been started successfully and is ready for a gdb connection.",
+            "serverLaunchTimeout": 20000,
+            "launchCompleteCommand": "None",
+
+            "miDebuggerArgs": "-se ${workspaceFolder}/${input:path_to_image}",
+            "setupCommands": [
+                { "text": "target remote localhost:${input:gdb_port}"},
+                { "text": "load"},
+                { "text": "monitor pause"},
+                { "text": "monitor using sysbus"},
+                { "text": "monitor showAnalyzer mmuart0"},
+                { "text": "monitor showAnalyzer mmuart1"},
+                { "text": "monitor showAnalyzer mmuart4"},
+                { "text": "monitor LoadELF @${input:path_to_image}"},
+                { "text": "monitor logLevel 3"},
+                { "text": "thread apply all set $pc=_start"},
+                { "text": "monitor start"}
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "path_to_image",
+            "type": "promptString",
+            "description": "path to the *.elf file relative to the workspace, ex: build-gpio/*.elf"
+        },
+        {
+            "id": "target_board",
+            "type": "pickString",
+            "options": [
+                "polarfire-soc-icicle-board"
+            ],
+            "default": "polarfire-soc-icicle-board",
+            "description": "Target board for Renode emulation"
+        },
+        {
+            "id": "debugger_config",
+            "type": "pickString",
+            "options": [
+                "microchip_riscv_efp5",
+                "microchip_riscv_efp6",
+                "microchip_riscv_fp5",
+                "microchip_riscv_fp6"],
+            "default": "microchip_riscv_efp5",
+            "description": "Target Flash Programmer"
+        },
+        {
+            "id": "gdb_port",
+            "type": "promptString",
+            "default": "3333",
+            "description": "GDB port"
+        }
+    ]
+}

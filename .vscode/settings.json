@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "charconv": "cpp",
+        "mss_hal.h": "c",
+        "cstdint": "c",
+        "random": "c"
+    }
+}

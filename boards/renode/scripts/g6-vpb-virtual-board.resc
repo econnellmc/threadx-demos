@@ -1,0 +1,10 @@
+:name: PolarFire 2 VPB Virtual Platform
+:description: This is a sample script prepared to create a PolarFire 2 VPB only virtual platform
+
+include @scripts/g6-vpb-base-platform.resc
+machine LoadPlatformDescriptionFromString 
+"""
+
+"""
+
+runMacro $ReadyForGdb

@@ -1,0 +1,29 @@
+logLevel 2
+mach create "PF Mi-V RV32 (IMC)"
+
+include @scripts/macros.resc
+
+
+machine LoadPlatformDescription @platforms/cpus/miv-rv32-pf-cpu.repl
+machine LoadPlatformDescription @platforms/cpus/miv-rv32-pf-board.repl
+machine LoadPlatformDescription @platforms/cpus/miv-rv32-pf-fabric.repl
+
+# The MiV FPGA reference image has GPIOs that are hardwired as output.
+# The following commands will replicate that behaviour in Renode.
+sysbus.gpioOutputs ConfigureFixedPinDirection 0 1
+sysbus.gpioOutputs ConfigureFixedPinDirection 1 1
+sysbus.gpioOutputs ConfigureFixedPinDirection 2 1
+sysbus.gpioOutputs ConfigureFixedPinDirection 3 1
+
+# Before invoking this script the GDB port has to be set, example: 
+# $GDB_SERVER_PORT=3333
+# When this script (or its children) are invoked from the SoftConsole external 
+# launcher then the GDB port can be set by adding the following argument before
+# the platform script is invoked: 
+# -e "$GDB_SERVER_PORT=3333"
+echo -n "Starting GDB server on port: "
+echo $GDB_SERVER_PORT
+machine StartGdbServer `echo $GDB_SERVER_PORT` true
+
+runMacro $ReadyForGdb
+

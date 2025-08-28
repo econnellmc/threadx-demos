@@ -1,0 +1,130 @@
+//=============================================================================
+// MONP core internals
+//=============================================================================
+
+monp: CPU.RiscV64 @ sysbus
+    cpuType: "rv64imafc_zicsr_zifencei"
+    hartId: 0
+    privilegeArchitecture: PrivilegeArchitecture.Priv1_11
+    timeProvider: clint
+    CyclesPerInstruction: 8
+    init:
+        RegisterCustomCSR "BPM" 0x7C0 Machine
+
+clint: IRQControllers.CoreLevelInterruptor  @ sysbus 0x02000000
+    frequency: 1000000
+    numberOfTargets: 1
+    [0, 1] -> monp@[3, 7]
+
+plic: IRQControllers.PlatformLevelInterruptController @ sysbus 0x0c000000
+    // monp: only machine mode interrupt
+    0 -> monp@11
+    // No user mode or hypervisor mode interrupts
+    numberOfSources: 128
+    numberOfContexts: 9
+    prioritiesEnabled : false
+
+//Trace Encoder - 0x10000000
+
+itim: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x40000
+
+dtim: Memory.MappedMemory @ sysbus 0x40040000
+    size: 0x20000
+
+
+//=============================================================================
+// Peripheral Port - 0x0000_8000_0000 - 0x001f_ffff_ffff
+// AHB Lite => APB Bus for peripherals with only MONP as Initiator
+//=============================================================================
+
+// SysRegs          0x80000000
+
+rtc: Timers.MPFS_RTC @ sysbus 0x80001000
+    WakeupIRQ -> plic@95
+    MatchIRQ  -> plic@94
+
+mstimer: Timers.MPFS_Timer @ sysbus 0x80002000
+    Timer1IRQ -> plic@92
+    Timer2IRQ -> plic@93
+
+mps_irq_ctrl: IRQControllers.MPSInterruptController @ sysbus 0x80003000
+    0           -> plic@0         //CSCB
+    1           -> plic@1         //CSCB
+    [2-3]       -> plic@[2-3]     //FNOC
+    4           -> plic@4         //VNOC
+    [5-7]       -> plic@[95-97]   //MGPIO
+    8           -> plic@99        //Fabric
+    9           -> monp@21        //USB MC
+    10          -> monp@22        //USB DMA
+    15          -> monp@23        //Crypto
+    [88-109]    -> plic@[5-26]    //HNOC
+
+// CFM              0x80005000 // Calibration Frequency Monitor
+// Trace config     0x80008000
+
+// Service Network  0x80800000 - 0x808017ff // Probes and Firewalls
+// MPS NOC Wrapper  0x80804000
+// Start SOC peripherals
+//    MSS SysRegs
+//    MSS NOC Service Network
+// End SOC peripherals
+// HNOC SVC/Wrapper 0x80C00000
+// VNOC SVC/Wrapper 0x80E00000
+
+// MPS Debug NOC    0x80040000
+
+//=============================================================================
+// System Port - 0x4000_0000_0000 - 0x7fff_ffff_ffff
+// AXI4 Initiator going via MPS NOC
+//=============================================================================
+
+// DMA Controller   0x7800_8000_0000        ???
+//pdma: DMA.MPFS_PDMA @ sysbus 0x780080000000
+//    [0-7] -> plic@[5-12]
+
+usb: USB.MPFS_USB @ sysbus 0x780080002000
+    DmaIRQ  -> mps_irq_ctrl@126
+    MainIRQ -> mps_irq_ctrl@125
+
+// Trace Port       0x7800_8000_3000
+
+mmuart0: UART.NS16550 @ sysbus 0x780080004000
+    wideRegisters: true
+    IRQ -> monp@17
+
+wdog0: Timers.MPFS_Watchdog @ sysbus 0x780080005000
+    frequency: 1000000 //Prescaler divides 80MHz input by 80
+    RefreshEnable ->  monp@16 //CLINT#0
+    //Trigger -> //cpu_nmi_0_rnmi 
+
+gpio0: GPIOPort.MPFS_GPIO @ sysbus 0x780080006000
+    IRQ -> mps_irq_ctrl@81
+
+gpio1: GPIOPort.MPFS_GPIO @ sysbus 0x780080007000
+    IRQ -> mps_irq_ctrl@85
+
+gpio2: GPIOPort.MPFS_GPIO @ sysbus 0x780080008000
+    IRQ -> mps_irq_ctrl@89
+
+// I3C              0x7800_8001_0000    //NEW CORE - Good candidate for verilator?
+i3c: I2C.MPFS_I2C @ sysbus 0x780080010000
+    IRQ -> monp@18
+
+// IPC              0x7800_8008_0000
+// [0-5] -> monp@[24-29]  //IPC MP interrupts
+// [6-11] -> monp@[30-35] //IPC MC interrupts
+
+// Start SoC only parts
+// User Crypto      0x7800_8010_0000
+    //int -> mps_irq_ctrl@131
+
+// Crypto Wrapper   0x7800_8014_0000
+
+// PUF              0x7800_8014_1000
+    //int -> monp@20
+// End SoC only parts
+
+// FIC APB          0x7800_A000_0000
+// FIC AXI4         0x7800_0000_0000
+    //FabricInt -> ??

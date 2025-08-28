@@ -1,0 +1,10 @@
+:name: PolarFire 2 MPS Virtual Platform
+:description: This is a sample script prepared to create a PolarFire 2 MPS only virtual platform
+
+include @scripts/g6-mps-base-platform.resc
+machine LoadPlatformDescriptionFromString 
+"""
+
+"""
+
+runMacro $ReadyForGdb

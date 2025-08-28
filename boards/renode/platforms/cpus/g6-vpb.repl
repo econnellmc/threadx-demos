@@ -1,0 +1,79 @@
+//=============================================================================
+// VPB core internals
+//=============================================================================
+
+vpb: CPU.RiscV64 @ sysbus
+    cpuType: "rv64imafcv_Zicsr_Zifencei_Zfh_Zba_Zbb"
+    hartId: 0
+    privilegeArchitecture: PrivilegeArchitecture.Priv1_11
+    timeProvider: clint
+    CyclesPerInstruction: 8
+    init:
+        RegisterCustomCSR "BPM" 0x7C0 Machine
+
+clint: IRQControllers.CoreLevelInterruptor  @ sysbus 0x02000000
+    frequency: 1000000
+    numberOfTargets: 1
+    [0, 1] -> vpb@[3, 7]
+
+plic: IRQControllers.PlatformLevelInterruptController @ sysbus 0x0c000000
+    // vpb: only machine mode interrupt
+    0 -> vpb@11
+    // No user mode or hypervisor mode interrupts
+    numberOfSources: 67
+    numberOfContexts: 9
+    prioritiesEnabled : false
+
+//Trace Encoder - 0x10000000
+
+itim: Memory.MappedMemory @ sysbus 0x01800000
+    size: 0x2000
+
+//SLPC 0x03008000 + 1000
+
+//Burst Bundler 0x10020000 + 1000
+
+//=============================================================================
+// Peripheral Port - 0x0_2000_0000 - 0x0_3fff_ffff
+//=============================================================================
+
+// MMUART0          0x0_2000_0000 +1000
+mmuart0: UART.NS16550 @ sysbus 0x020000000
+    wideRegisters: true
+    IRQ -> plic@64
+
+// MGPIO_0          0x0_2000_1000 +1000
+gpio0: GPIOPort.MPFS_GPIO @ sysbus 0x20001000
+    [0-31] -> plic@[32-63]
+    IRQ -> plic@65
+
+// Watchdog         0x0_2000_2000 +1000
+//Bus Error Unit    0x0_2000_3000 +1000
+//Internal Control  0x0_2000_4000 +1000
+//FPGA Passthrough      0x0_3000_0000 +1000_0000
+
+//=============================================================================
+// Memory Port - 0x1_0000_0000_0000 - 0x1_FFFF_FFFF_FFFF
+//=============================================================================
+
+//FPGA Passthrough      0x1_0000_4000_0000 - 0x1_00000_7FFF_FFFF
+//VSRAM                 0x1_0000_8000_0000 +8_0000
+fpga: Memory.MappedMemory @ sysbus 0x1000040000000
+    size: 0x40000
+
+//VSRAM                 0x1_0000_8000_0000 +8_0000
+vsram: Memory.MappedMemory @ sysbus 0x1000080000000
+    size: 0x40000
+
+//=============================================================================
+// Bypass Port - 0x1_4000_0000 - 0x1_ffff_ffff
+//=============================================================================
+
+//FPGA Passthrough      0x1_4000_0000 - 0x1_7FFF_FFFF
+
+//VSRAM                 0x1_8000_8000_0000 +8_0000
+ddr: Memory.MappedMemory @ { sysbus 0x1800080000000; sysbus 0x2800080000000 }
+    size: 0x80000000
+
+fabric: Memory.MappedMemory @ sysbus 0x100007FFC0000
+    size: 0x40000

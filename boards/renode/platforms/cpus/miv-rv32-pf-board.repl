@@ -1,0 +1,10 @@
+gpioOutputs:
+    0 -> led0@0
+    1 -> led1@0
+
+led0: Miscellaneous.LED @ gpioOutputs 0
+    invert: true
+
+led1: Miscellaneous.LED @ gpioOutputs 1
+    invert: true
+

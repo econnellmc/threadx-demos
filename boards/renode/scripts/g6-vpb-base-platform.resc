@@ -1,0 +1,27 @@
+:name: PolarFire 2 VPB
+:description: This is a sample script prepared to create a PolarFire 2 platform
+
+include @scripts/macros.resc
+
+logLevel 3
+
+using sysbus
+mach create
+
+machine LoadPlatformDescription @platforms/cpus/g6-vpb.repl
+
+vpb InstallCustomInstructionHandlerFromString "11111100000000000000000001110011" "cpu.Log(LogLevel.Debug, 'Custom opcode CFLUSH.D.L1 {0}'.format(hex(instruction)))"
+vpb InstallCustomInstructionHandlerFromString "11111100000100000000000001110011" "cpu.Log(LogLevel.Debug, 'Custom opcode CFLUSH.I.L1 {0}'.format(hex(instruction)))"
+vpb InstallCustomInstructionHandlerFromString "11111100001000000000000001110011" "cpu.Log(LogLevel.Debug, 'Custom opcode CDISCARD.I.L1 {0}'.format(hex(instruction)))"
+
+logLevel 3 sysbus.vpb
+
+# Before invoking this script the GDB port has to be set, example: 
+# $GDB_SERVER_PORT=3333
+# When this script (or its children) are invoked from the SoftConsole external 
+# launcher then the GDB port can be set by adding the following argument before
+# the platform script is invoked: 
+# -e "$GDB_SERVER_PORT=3333"
+echo -n "Starting GDB server on port: "
+echo $GDB_SERVER_PORT
+machine StartGdbServer `echo $GDB_SERVER_PORT`
